@@ -2,8 +2,8 @@
 
 This is perlin noise!!! !!! !!! [source](https://habr.com/ru/articles/142592/)
 
-# Usage 
-
+# Usage (depr) Just see Makefile
+`TODO: DO!`
 ```sh
 go run [width] [height] [persistence] [octaves]
 ```
