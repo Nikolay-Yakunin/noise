@@ -7,6 +7,12 @@
 
 <body>
 	<p>Here will be form for noise creating</p>
-	<form><form>
-	<img src="/noise" alt="Perlin Noise" />
+	<form action="noise" target="noise">
+		<input id="width" name="width" type="range" min=0 max=2560 step=1 />
+		<input id="height" name="height" type="range" min=0 max=2560 step=1 />
+		<input id="per" name="per" type="number" />
+		<input id="octaves" name="octaves" type="range" min=0 max=25 step=1 />
+		<input type="submit" value="Generate" />
+	</form>
+	<iframe name="noise" src="/noise" alt="Perlin Noise" />
 </body>
