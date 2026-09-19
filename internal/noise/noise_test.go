@@ -55,7 +55,7 @@ func BenchmarkAsyncFlatNoiseImage(b *testing.B) {
 	width, height := 2560, 1440
 
 	for b.Loop() {
-		res := AsyncFlatPerlinNoise2D(width, height, 0.5, 5)
+		res := AsyncFlatPerlinNoise2D(width, height, 16, 0.5, 5)
 		img := image.NewGray(image.Rect(0, 0, width, height))
 
 		for y := range height {
