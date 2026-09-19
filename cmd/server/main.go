@@ -26,6 +26,7 @@ func main() {
 		fmt.Fprintf(w, "pong")
 	})
 
+	// DEPR
 	http.HandleFunc("/noise", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
 		per := 0.5
