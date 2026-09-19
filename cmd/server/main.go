@@ -10,11 +10,16 @@ import (
 	"net/http"
 	"strconv"
 
+	static "github.com/Nikolay-Yakunin/noise/html"
 	"github.com/Nikolay-Yakunin/noise/internal/noise"
 )
 
 func main() {
 	fmt.Println("Hello, Server!")
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "%s", static.Index)
+	})
 
 	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "pong")
