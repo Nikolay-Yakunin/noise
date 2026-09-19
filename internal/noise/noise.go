@@ -91,12 +91,13 @@ func AsyncChunkPerlinNoise2D(width, height int, persistence float64, octaves int
 	return grid
 }
 
-func AsyncFlatPerlinNoise2D(width, height int, persistence float64, octaves int) []float64 {
+func AsyncFlatPerlinNoise2D(width, height, scale int, persistence float64, octaves int) []float64 {
 	grid := make([]float64, height*width)
 	var wg sync.WaitGroup
 
 	numWorkers := runtime.NumCPU()
 	chunkSize := (height + numWorkers - 1) / numWorkers
+	scaleF := float64(scale)
 
 	for i := range numWorkers {
 		startY := i * chunkSize
@@ -112,7 +113,7 @@ func AsyncFlatPerlinNoise2D(width, height int, persistence float64, octaves int)
 				offset := y * width
 				row := grid[offset : offset+width]
 				for x := range width {
-					row[x] = PerlinNoise2D(float64(x)/16, float64(y)/16, persistence, octaves)
+					row[x] = PerlinNoise2D(float64(x)/scaleF, float64(y)/scaleF, persistence, octaves)
 				}
 			}
 		}(startY, endY)

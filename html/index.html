@@ -21,8 +21,16 @@
 	<form action="noiseAsync" target="noise">
 		<input id="width" name="width" type="number" min=0 max=2560 step=1 value=2560 />
 		<input id="height" name="height" type="number" min=0 max=2560 step=1 value=1440 />
+		<select id="scale" name="scale">
+			<option value=4>4</option>
+			<option value=8>8</option>
+			<option value=16 selected>16</option>
+			<option value=32>32</option>
+			<option value=64>64</option>
+			<option value=128>128</option>
+		</select>
 		<input id="per" name="per" type="number" step=0.1 value=0.5 />
-		<input id="octaves" name="octaves" type="number" min=0 max=25 step=1 value=5 />
+		<input id="oct" name="oct" type="number" min=0 max=25 step=1 value=5 />
 		<input type="submit" value="Generate" />
 	</form>
 	<iframe name="noise" src="/noiseAsync" alt="Perlin Noise" />

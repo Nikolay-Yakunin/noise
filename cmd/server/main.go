@@ -63,7 +63,7 @@ func main() {
 		w.Header().Set("Content-Type", "image/png")
 		per := 0.5
 		oct := 5
-		width, height := 2560, 1440
+		width, height, scale := 2560, 1440, 16
 
 		q := r.URL.Query()
 
@@ -74,6 +74,9 @@ func main() {
 		if n, err := strconv.Atoi(q.Get("height")); err == nil && n > 0 {
 			height = n
 		}
+		if n, err := strconv.Atoi(q.Get("scale")); err == nil && n > 0 {
+			scale = n
+		}
 		if n, err := strconv.ParseFloat(q.Get("per"), 64); err == nil && n > 0 {
 			per = n
 		}
@@ -81,7 +84,7 @@ func main() {
 			oct = n
 		}
 
-		res := noise.AsyncFlatPerlinNoise2D(width, height, per, oct)
+		res := noise.AsyncFlatPerlinNoise2D(width, height, scale, per, oct)
 		img := image.NewGray(image.Rect(0, 0, width, height))
 
 		for y := range height {
