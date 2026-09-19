@@ -1,7 +1,11 @@
 // Package noise internal logic
 package noise
 
-import "math"
+import (
+	"math"
+	"runtime"
+	"sync"
+)
 
 func IntNoise1(x int32) float64 {
 	x = (x << 13) ^ x
@@ -43,10 +47,77 @@ func InterpolatedNoise1(x, y float64) float64 {
 
 func PerlinNoise2D(x, y, persistence float64, octaves int) float64 {
 	total := 0.0
-	for i := range octaves {
-		frequency := math.Pow(2, float64(i))
-		amplitude := math.Pow(persistence, float64(i))
+	frequency := 1.0
+	amplitude := 1.0
+	for i := 0; i < octaves; i++ {
 		total += InterpolatedNoise1(x*frequency, y*frequency) * amplitude
+		frequency *= 2.0
+		amplitude *= persistence
 	}
 	return total
+}
+
+func AsyncChunkPerlinNoise2D(width, height int, persistence float64, octaves int) [][]float64 {
+	grid := make([][]float64, height)
+	var wg sync.WaitGroup
+
+	for i := range height {
+		grid[i] = make([]float64, width)
+	}
+
+	numWorkers := runtime.NumCPU()
+	chunkSize := (height + numWorkers - 1) / numWorkers
+
+	for i := range numWorkers {
+		startY := i * chunkSize
+		endY := min(startY+chunkSize, height)
+		if startY >= height {
+			break
+		}
+
+		wg.Add(1)
+		go func(start, end int) {
+			defer wg.Done()
+			for y := start; y < end; y++ {
+				row := grid[y]
+				for x := range width {
+					row[x] = PerlinNoise2D(float64(x)/16, float64(y)/16, persistence, octaves)
+				}
+			}
+		}(startY, endY)
+	}
+
+	wg.Wait()
+	return grid
+}
+
+func AsyncFlatPerlinNoise2D(width, height int, persistence float64, octaves int) []float64 {
+	grid := make([]float64, height*width)
+	var wg sync.WaitGroup
+
+	numWorkers := runtime.NumCPU()
+	chunkSize := (height + numWorkers - 1) / numWorkers
+
+	for i := range numWorkers {
+		startY := i * chunkSize
+		endY := min(startY+chunkSize, height)
+		if startY >= height {
+			break
+		}
+
+		wg.Add(1)
+		go func(start, end int) {
+			defer wg.Done()
+			for y := start; y < end; y++ {
+				offset := y * width
+				row := grid[offset : offset+width]
+				for x := range width {
+					row[x] = PerlinNoise2D(float64(x)/16, float64(y)/16, persistence, octaves)
+				}
+			}
+		}(startY, endY)
+	}
+
+	wg.Wait()
+	return grid
 }

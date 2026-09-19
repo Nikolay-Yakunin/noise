@@ -12,3 +12,6 @@ run-cli:
 
 run-http:
 	go run cmd/server/main.go
+
+run-test:
+	go test -bench=. ./...
