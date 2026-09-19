@@ -122,5 +122,3 @@ func AsyncFlatPerlinNoise2D(width, height, scale int, persistence float64, octav
 	wg.Wait()
 	return grid
 }
-
-func GPUPerlinNoise2D() {}
