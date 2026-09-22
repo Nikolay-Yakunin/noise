@@ -14,7 +14,7 @@ func BenchmarkGPUNoise(b *testing.B) {
 	for b.Loop() {
 		res, err := GPUPerlinNoise2D(width, height, 16, 0.5, 5)
 		if err != nil {
-			fmt.Errorf("GPU render erro: %s", err)
+			fmt.Println(fmt.Errorf("GPU render erro: %s", err))
 		}
 		img := image.NewGray(image.Rect(0, 0, width, height))
 

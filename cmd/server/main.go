@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"strconv"
 
-	static "github.com/Nikolay-Yakunin/noise/html"
 	"github.com/Nikolay-Yakunin/noise/internal/gpunoise"
 	"github.com/Nikolay-Yakunin/noise/internal/noise"
+	"github.com/Nikolay-Yakunin/noise/static"
 )
 
 func main() {
