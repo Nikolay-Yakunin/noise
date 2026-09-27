@@ -45,7 +45,7 @@ func InterpolatedNoise1(x, y float64) float64 {
 	return Interpolate(i1, i2, fractionalY)
 }
 
-func PerlinNoise2D(x, y, persistence float64, octaves int) float64 {
+func ValueNoise2D(x, y, persistence float64, octaves int) float64 {
 	total := 0.0
 	frequency := 1.0
 	amplitude := 1.0
@@ -57,7 +57,7 @@ func PerlinNoise2D(x, y, persistence float64, octaves int) float64 {
 	return total
 }
 
-func AsyncChunkPerlinNoise2D(width, height int, persistence float64, octaves int) [][]float64 {
+func AsyncChunkValueNoise2D(width, height int, persistence float64, octaves int) [][]float64 {
 	grid := make([][]float64, height)
 	var wg sync.WaitGroup
 
@@ -81,7 +81,7 @@ func AsyncChunkPerlinNoise2D(width, height int, persistence float64, octaves int
 			for y := start; y < end; y++ {
 				row := grid[y]
 				for x := range width {
-					row[x] = PerlinNoise2D(float64(x)/16, float64(y)/16, persistence, octaves)
+					row[x] = ValueNoise2D(float64(x)/16, float64(y)/16, persistence, octaves)
 				}
 			}
 		}(startY, endY)
@@ -91,7 +91,7 @@ func AsyncChunkPerlinNoise2D(width, height int, persistence float64, octaves int
 	return grid
 }
 
-func AsyncFlatPerlinNoise2D(width, height, scale int, persistence float64, octaves int) []float64 {
+func AsyncFlatValueNoise2D(width, height, scale int, persistence float64, octaves int) []float64 {
 	grid := make([]float64, height*width)
 	var wg sync.WaitGroup
 
@@ -113,7 +113,7 @@ func AsyncFlatPerlinNoise2D(width, height, scale int, persistence float64, octav
 				offset := y * width
 				row := grid[offset : offset+width]
 				for x := range width {
-					row[x] = PerlinNoise2D(float64(x)/scaleF, float64(y)/scaleF, persistence, octaves)
+					row[x] = ValueNoise2D(float64(x)/scaleF, float64(y)/scaleF, persistence, octaves)
 				}
 			}
 		}(startY, endY)

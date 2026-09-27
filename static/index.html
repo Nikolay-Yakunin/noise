@@ -9,34 +9,69 @@
 			margin: 0;
 			box-sizing: border-box;
 		}
+		body {
+			font-family: monospace;
+			background: #111;
+			color: #ddd;
+		}
 		iframe {
 			min-width: 100%;
 			height: 80vh;
+		}
+		#mode-value:checked ~ .perlin-only,
+		#mode-perlin:checked ~ .value-only {
+			opacity: 0.4;
+			pointer-events: none;
+		}
+		#mode-value:checked ~ .go-perlin,
+		#mode-perlin:checked ~ .go-value {
+			display: none;
+		}
+		a {
+			color: #6cf;
 		}
 	</style>
 </head>
 
 <body>
-	<h1>Perlin Noise Generator</h1>
-	<form action="noiseAsync" target="noise">
-		<label for="width">Width</label>
-		<input id="width" name="width" type="number" min=0 max=2560 step=1 value=2560 />
-		<label for="height">Height</label>
-		<input id="height" name="height" type="number" min=0 max=2560 step=1 value=1440 />
-		<label for="scale">Scale</label>
-		<select id="scale" name="scale">
-			<option value=4>4</option>
-			<option value=8>8</option>
-			<option value=16 selected>16</option>
-			<option value=32>32</option>
-			<option value=64>64</option>
-			<option value=128>128</option>
-		</select>
-		<label for="per">Persistense</label>
-		<input id="per" name="per" type="number" step=0.1 value=0.5 />
-		<label for="oct">Octaves</label>
-		<input id="oct" name="oct" type="number" min=0 max=25 step=1 value=5 />
-		<input type="submit" value="Generate" />
+	<h1>Noise Generator <a href="/view3d">3D raymarch &rarr;</a></h1>
+	<form action="noiseValue" target="noise">
+		<label>Mode</label>
+		<input id="mode-value" name="mode" type="radio" value=value checked />
+		<label for="mode-value">Value</label>
+		<input id="mode-perlin" name="mode" type="radio" value=perlin />
+		<label for="mode-perlin">Perlin</label>
+		<div>
+			<label for="width">Width</label>
+			<input id="width" name="width" type="number" min=0 max=2560 step=1 value=2560 />
+			<label for="height">Height</label>
+			<input id="height" name="height" type="number" min=0 max=2560 step=1 value=1440 />
+			<label for="scale">Scale</label>
+			<select id="scale" name="scale">
+				<option value=4>4</option>
+				<option value=8>8</option>
+				<option value=16 selected>16</option>
+				<option value=32>32</option>
+				<option value=64>64</option>
+				<option value=128>128</option>
+			</select>
+			<label for="oct">Octaves</label>
+			<input id="oct" name="oct" type="number" min=0 max=25 step=1 value=5 />
+		</div>
+		<div class="value-only">
+			<label for="per">Persistense</label>
+			<input id="per" name="per" type="number" step=0.1 value=0.5 />
+		</div>
+		<div class="perlin-only">
+			<label for="alpha">Alpha</label>
+			<input id="alpha" name="alpha" type="number" min=1 step=0.1 value=2 />
+			<label for="beta">Beta</label>
+			<input id="beta" name="beta" type="number" min=1 step=0.1 value=2 />
+			<label for="seed">Seed</label>
+			<input id="seed" name="seed" type="number" step=1 value=1 />
+		</div>
+		<input class="go-value" type="submit" formaction="noiseValue" value="Generate" />
+		<input class="go-perlin" type="submit" formaction="noisePerlin" value="Generate" />
 	</form>
-	<iframe name="noise" src="/noiseAsync" alt="Perlin Noise" />
+	<iframe name="noise" src="/noiseValue" alt="Noise" />
 </body>

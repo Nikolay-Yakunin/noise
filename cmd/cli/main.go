@@ -41,7 +41,7 @@ func main() {
 			oct = n
 		}
 	}
-	res := noise.AsyncFlatPerlinNoise2D(width, height, scale, per, oct)
+	res := noise.AsyncFlatValueNoise2D(width, height, scale, per, oct)
 	img := image.NewGray(image.Rect(0, 0, width, height))
 
 	for y := range height {

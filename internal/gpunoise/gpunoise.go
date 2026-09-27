@@ -1,3 +1,4 @@
+// Package gpunoise is a package
 package gpunoise
 
 import (
@@ -37,7 +38,6 @@ var (
 	gpuCtxErr  error
 )
 
-// initGPUContext инициализирует GPU контекст один раз
 func initGPUContext() (*GPUContext, error) {
 	gpuCtxOnce.Do(func() {
 		instance, err := wgpu.CreateInstance(nil)
@@ -64,8 +64,8 @@ func initGPUContext() (*GPUContext, error) {
 		}
 
 		shader, err := device.CreateShaderModule(&wgpu.ShaderModuleDescriptor{
-			Label: "Perlin Noise Shader",
-			WGSL:  static.Shader,
+			Label: "Value Noise Shader",
+			WGSL:  static.ShaderValue,
 		})
 		if err != nil {
 			device.Release()
@@ -106,7 +106,7 @@ func initGPUContext() (*GPUContext, error) {
 		}
 
 		pipeline, err := device.CreateComputePipeline(&wgpu.ComputePipelineDescriptor{
-			Label:      "Perlin Noise Pipeline",
+			Label:      "Value Noise Pipeline",
 			Layout:     pipelineLayout,
 			Module:     shader,
 			EntryPoint: "main",
@@ -136,7 +136,6 @@ func initGPUContext() (*GPUContext, error) {
 	return gpuCtx, gpuCtxErr
 }
 
-// CleanupGPU освобождает GPU ресурсы (вызывать при завершении программы)
 func CleanupGPU() {
 	if gpuCtx != nil {
 		gpuCtx.pipeline.Release()
@@ -150,7 +149,7 @@ func CleanupGPU() {
 	}
 }
 
-func GPUPerlinNoise2D(width, height int, scale float64, persistence float64, octaves int) ([]float64, error) {
+func GPUValueNoise2D(width, height int, scale float64, persistence float64, octaves int) ([]float64, error) {
 	ctx, err := initGPUContext()
 	if err != nil {
 		return nil, err
@@ -165,7 +164,6 @@ func GPUPerlinNoise2D(width, height int, scale float64, persistence float64, oct
 	}
 	paramsSize := uint64(unsafe.Sizeof(params))
 
-	// Создаем только буферы для данных (это быстро)
 	paramsBuffer, err := ctx.device.CreateBuffer(&wgpu.BufferDescriptor{
 		Label: "Params Buffer",
 		Size:  paramsSize,

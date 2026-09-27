@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+
+<head lang="en">
+	<meta charset="utf-8" />
+	<title>Perlin Noise 3D</title>
+	<style>
+		* {
+			padding: 0;
+			margin: 0;
+			box-sizing: border-box;
+		}
+		body {
+			font-family: monospace;
+			background: #111;
+			color: #ddd;
+		}
+		h1 {
+			font-size: 1.1rem;
+			padding: 0.5rem;
+		}
+		a {
+			color: #6cf;
+		}
+		form {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.4rem 0.8rem;
+			align-items: center;
+			padding: 0.5rem;
+			border-top: 1px solid #333;
+			border-bottom: 1px solid #333;
+		}
+		form label {
+			color: #888;
+		}
+		form input {
+			width: 5rem;
+			background: #222;
+			border: 1px solid #444;
+			color: #ddd;
+			font: inherit;
+			padding: 0.1rem 0.2rem;
+		}
+		#stage {
+			position: relative;
+			height: 75vh;
+		}
+		canvas {
+			width: 100%;
+			height: 100%;
+			display: block;
+			cursor: grab;
+		}
+		canvas:active {
+			cursor: grabbing;
+		}
+		#status {
+			padding: 0.4rem 0.5rem;
+			color: #888;
+			white-space: pre-wrap;
+		}
+		#error {
+			padding: 0.5rem;
+			color: #f66;
+			white-space: pre-wrap;
+		}
+	</style>
+</head>
+
+<body>
+	<h1><a href="/">&larr;</a> Perlin Noise 3D</h1>
+
+	<form method="get" action="/view3d">
+		<label for="seed">seed</label>
+		<input id="seed" name="seed" type="number" step="1" />
+		<label for="scale">scale</label>
+		<input id="scale" name="scale" type="number" step="0.1" />
+		<label for="oct">oct</label>
+		<input id="oct" name="oct" type="number" step="1" />
+		<label for="alpha">alpha</label>
+		<input id="alpha" name="alpha" type="number" step="0.1" />
+		<label for="beta">beta</label>
+		<input id="beta" name="beta" type="number" step="0.1" />
+		<label for="iso">iso</label>
+		<input id="iso" name="iso" type="number" step="0.05" />
+		<label for="density">density</label>
+		<input id="density" name="density" type="number" step="0.1" />
+		<label for="steps">steps</label>
+		<input id="steps" name="steps" type="number" step="1" />
+		<label for="gain">gain</label>
+		<input id="gain" name="gain" type="number" step="0.1" />
+		<label for="drift">drift</label>
+		<input id="drift" name="drift" type="number" step="0.01" />
+		<label for="dist">dist</label>
+		<input id="dist" name="dist" type="number" step="0.1" />
+		<label for="rot">rot</label>
+		<input id="rot" name="rot" type="number" step="0.05" />
+		<label for="res">res</label>
+		<input id="res" name="res" type="number" step="0.1" />
+		<button type="submit">apply</button>
+	</form>
+
+	<div id="stage"><canvas id="canvas"></canvas></div>
+	<div id="status">initializing...</div>
+	<div id="error"></div>
+
+	<script type="module">
+		const DEFAULTS = {
+			seed: 1,
+			scale: 2.5,
+			oct: 4,
+			alpha: 2,
+			beta: 2,
+			iso: 0,
+			density: 1.2,
+			steps: 96,
+			gain: 1,
+			drift: 0.15,
+			dist: 2.6,
+			rot: 0.25,
+			res: 1,
+		};
+
+		const query = new URLSearchParams(location.search);
+		const params = {};
+		for (const [key, fallback] of Object.entries(DEFAULTS)) {
+			const parsed = parseFloat(query.get(key));
+			params[key] = Number.isFinite(parsed) ? parsed : fallback;
+		}
+
+		for (const key of Object.keys(DEFAULTS)) {
+			document.getElementById(key).value = params[key];
+		}
+
+		const statusEl = document.getElementById('status');
+		const errorEl = document.getElementById('error');
+		const canvas = document.getElementById('canvas');
+
+		function fail(message) {
+			errorEl.textContent = message;
+			statusEl.textContent = 'failed';
+			throw new Error(message);
+		}
+
+		async function fetchChecked(url) {
+			const response = await fetch(url);
+			if (!response.ok) {
+				fail(`${url} -> ${response.status} ${await response.text()}`);
+			}
+			return response;
+		}
+
+		if (!navigator.gpu) {
+			fail(
+				'WebGPU is not available in this browser.\n' +
+					'On Linux it usually needs Chrome/Chromium, or a Firefox build with WebGPU enabled.'
+			);
+		}
+
+		const adapter = await navigator.gpu.requestAdapter();
+		if (!adapter) {
+			fail('requestAdapter() returned null, no GPU adapter available');
+		}
+
+		const device = await adapter.requestDevice();
+		device.addEventListener('uncapturederror', (event) => {
+			errorEl.textContent = 'uncaptured: ' + event.error.message;
+		});
+
+		const adapterName = await describeAdapter(adapter);
+
+		async function describeAdapter(adapter) {
+			let info = adapter.info;
+			if (!info && typeof adapter.requestAdapterInfo === 'function') {
+				try {
+					info = await adapter.requestAdapterInfo();
+				} catch {
+					info = null;
+				}
+			}
+			if (!info) {
+				return 'unknown adapter';
+			}
+			return [info.vendor, info.architecture, info.device, info.description]
+				.filter(Boolean)
+				.join(' ') || 'unknown adapter';
+		}
+
+		statusEl.textContent = 'compiling shader...';
+
+		const tablesQuery = new URLSearchParams({ seed: String(params.seed) });
+		const [shaderResponse, tablesResponse] = await Promise.all([
+			fetchChecked('/shader_raymarch.wgsl'),
+			fetchChecked('/perlinTables.bin?' + tablesQuery),
+		]);
+
+		const module = device.createShaderModule({
+			label: 'Perlin Raymarch',
+			code: await shaderResponse.text(),
+		});
+
+		const tableData = new Uint8Array(await tablesResponse.arrayBuffer());
+		if (tableData.byteLength === 0 || tableData.byteLength % 16 !== 0) {
+			fail(`unexpected table size ${tableData.byteLength}, expected a non-zero multiple of 16`);
+		}
+
+		const tableBuffer = device.createBuffer({
+			label: 'Perlin Tables',
+			size: tableData.byteLength,
+			usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+		});
+		device.queue.writeBuffer(tableBuffer, 0, tableData);
+
+		const format = navigator.gpu.getPreferredCanvasFormat();
+		const context = canvas.getContext('webgpu');
+		context.configure({ device, format, alphaMode: 'opaque' });
+
+		const pipeline = device.createRenderPipeline({
+			label: 'Perlin Raymarch Pipeline',
+			layout: 'auto',
+			vertex: { module, entryPoint: 'vsMain' },
+			fragment: { module, entryPoint: 'raymarch', targets: [{ format }] },
+			primitive: { topology: 'triangle-list' },
+		});
+
+		const uniformBuffer = device.createBuffer({
+			label: 'Uniforms',
+			size: 96,
+			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+		});
+
+		const bindGroup = device.createBindGroup({
+			layout: pipeline.getBindGroupLayout(0),
+			entries: [
+				{ binding: 0, resource: { buffer: uniformBuffer } },
+				{ binding: 1, resource: { buffer: tableBuffer } },
+			],
+		});
+
+		let yaw = 0.7;
+		let pitch = 0.45;
+		let dragging = false;
+		let lastX = 0;
+		let lastY = 0;
+
+		canvas.addEventListener('pointerdown', (event) => {
+			dragging = true;
+			lastX = event.clientX;
+			lastY = event.clientY;
+			canvas.setPointerCapture(event.pointerId);
+		});
+
+		canvas.addEventListener('pointermove', (event) => {
+			if (!dragging) {
+				return;
+			}
+			yaw -= (event.clientX - lastX) * 0.005;
+			pitch += (event.clientY - lastY) * 0.005;
+			pitch = Math.max(-1.5, Math.min(1.5, pitch));
+			lastX = event.clientX;
+			lastY = event.clientY;
+		});
+
+		canvas.addEventListener('pointerup', (event) => {
+			dragging = false;
+			canvas.releasePointerCapture(event.pointerId);
+		});
+
+		canvas.addEventListener('wheel', (event) => {
+			event.preventDefault();
+			params.dist = Math.max(1.05, Math.min(20, params.dist * Math.exp(event.deltaY * 0.001)));
+			document.getElementById('dist').value = params.dist;
+		}, { passive: false });
+
+		function resize() {
+			const ratio = Math.min(window.devicePixelRatio || 1, 2) * params.res;
+			const width = Math.max(1, Math.floor(canvas.clientWidth * ratio));
+			const height = Math.max(1, Math.floor(canvas.clientHeight * ratio));
+			if (canvas.width !== width || canvas.height !== height) {
+				canvas.width = width;
+				canvas.height = height;
+			}
+		}
+
+		const uniforms = new Float32Array(24);
+
+		function writeUniforms(time) {
+			const cosPitch = Math.cos(pitch);
+			const posX = params.dist * cosPitch * Math.sin(yaw);
+			const posY = params.dist * Math.sin(pitch);
+			const posZ = params.dist * cosPitch * Math.cos(yaw);
+
+			let fwdX = -posX;
+			let fwdY = -posY;
+			let fwdZ = -posZ;
+			const fwdLen = Math.hypot(fwdX, fwdY, fwdZ) || 1;
+			fwdX /= fwdLen;
+			fwdY /= fwdLen;
+			fwdZ /= fwdLen;
+
+			const rightLen = Math.hypot(fwdZ, fwdX) || 1;
+			const rightX = -fwdZ / rightLen;
+			const rightY = 0;
+			const rightZ = fwdX / rightLen;
+
+			const upX = rightY * fwdZ - rightZ * fwdY;
+			const upY = rightZ * fwdX - rightX * fwdZ;
+			const upZ = rightX * fwdY - rightY * fwdX;
+
+			uniforms.set([posX, posY, posZ], 0);
+			uniforms.set([rightX, rightY, rightZ], 3);
+			uniforms.set([upX, upY, upZ], 6);
+			uniforms.set([fwdX, fwdY, fwdZ], 9);
+			uniforms.set([
+				params.scale,
+				Math.max(1, Math.round(params.oct)),
+				params.alpha,
+				params.beta,
+				params.density,
+				Math.round(params.steps),
+				params.iso,
+				canvas.width,
+				canvas.height,
+				time,
+				params.gain,
+				params.drift,
+			], 12);
+
+			device.queue.writeBuffer(uniformBuffer, 0, uniforms);
+		}
+
+		let previous = performance.now();
+		let frames = 0;
+		let fpsSince = previous;
+
+		function frame(now) {
+			resize();
+
+			const delta = Math.min((now - previous) / 1000, 0.1);
+			previous = now;
+
+			yaw += params.rot * delta;
+			writeUniforms(now / 1000);
+
+			const encoder = device.createCommandEncoder();
+			const pass = encoder.beginRenderPass({
+				colorAttachments: [{
+					view: context.getCurrentTexture().createView(),
+					loadOp: 'clear',
+					clearValue: { r: 0, g: 0, b: 0, a: 1 },
+					storeOp: 'store',
+				}],
+			});
+			pass.setPipeline(pipeline);
+			pass.setBindGroup(0, bindGroup);
+			pass.draw(3);
+			pass.end();
+			device.queue.submit([encoder.finish()]);
+
+			frames++;
+			if (now - fpsSince > 500) {
+				const fps = (frames * 1000) / (now - fpsSince);
+				statusEl.textContent =
+					`${adapterName} | ${canvas.width}x${canvas.height} | ${fps.toFixed(1)} fps | ` +
+					`${(1000 / fps).toFixed(1)} ms | seed ${params.seed} | drag to rotate, wheel to zoom`;
+				frames = 0;
+				fpsSince = now;
+			}
+
+			requestAnimationFrame(frame);
+		}
+
+		statusEl.textContent = 'ready';
+		requestAnimationFrame(frame);
+	</script>
+</body>
